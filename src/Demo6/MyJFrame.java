@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Stack;
 
 public class MyJFrame extends JFrame implements ActionListener {
 
@@ -26,13 +27,13 @@ public class MyJFrame extends JFrame implements ActionListener {
     private JButton jButton43 = new JButton("=");
     private JButton jButton44 = new JButton("-");
 
-    private double text1 = 0;
-    private double text2 = 0;
+//    private double text1 = 0;
+//    private double text2 = 0;
     private double sum = 0;
-    private int opflag = 0;     //1+; 2-; 3*; 4/  5=
+    //private int opflag = 0;     //1+; 2-; 3*; 4/  5=
+    private boolean flag = false;
     public MyJFrame() {
         initJFrame();
-
         this.setVisible(true);
     }
 
@@ -54,7 +55,6 @@ public class MyJFrame extends JFrame implements ActionListener {
         jTextField.setBounds(0, 0, 300, 30);
         this.getContentPane().add(jTextField);
         place();
-
     }
 
     public void place() {
@@ -114,9 +114,9 @@ public class MyJFrame extends JFrame implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if(opflag == 5){
+        if(flag) {
+            flag = false;
             jTextField.setText("");
-            opflag = 0;
         }
         Object source = e.getSource();
         String str = jTextField.getText();
@@ -142,45 +142,84 @@ public class MyJFrame extends JFrame implements ActionListener {
             jTextField.setText(str + "9");
         }else if(source == jButton42){
             jTextField.setText(str + ".");
-        } else if(source == jButton44){
-            text1 = Double.parseDouble(str);
-            jTextField.setText("");
-            opflag = 2;
-        }else if(source == jButton14){
-            text1 = Double.parseDouble(str);
-            jTextField.setText("");
-            opflag = 4;
-        }else if(source == jButton24){
-            text1 = Double.parseDouble(str);
-            jTextField.setText("");
-            opflag = 3;
         }else if(source == jButton34){
-            text1 = Double.parseDouble(str);
-            jTextField.setText("");
-            opflag = 1;
+            jTextField.setText(str + "+");
+        }else if(source == jButton44){
+            jTextField.setText(str + "-");
+        }else if(source == jButton24){
+            jTextField.setText(str + "*");
+        }else if(source == jButton14){
+            jTextField.setText(str + "/");
         }else if(source == jButton43){
-            text2 = Double.parseDouble(str);
-            switch (opflag){
-                case 1:
-                    sum = text1 + text2;
-                    break;
-                case 2:
-                    sum = text1 - text2;
-                    break;
-                case 3:
-                    sum = text1 * text2;
-                    break;
-                case 4:
-                    sum = text1 / text2;
-                    break;
-                default:
-                    break;
-            }
-            jTextField.setText(sum + "");
-            text1 = 0;
-            text2 = 0;
-            sum = 0;
-            opflag = 5;
+            flag = true;
+            sum = evaluateExpression(str);
+            jTextField.setText(str+"="+sum);
         }
     }
+    public static double evaluateExpression(String expression) {
+        char[] tokens = expression.toCharArray();
+
+        Stack<Double> values = new Stack<>();
+        Stack<Character> operators = new Stack<>();
+
+        for (int i = 0; i < tokens.length; i++) {
+            if (tokens[i] == ' ')
+                continue;
+
+            if (Character.isDigit(tokens[i]) || tokens[i] == '.') {
+                StringBuilder sb = new StringBuilder();
+                while (i < tokens.length && (Character.isDigit(tokens[i]) || tokens[i] == '.')) {
+                    sb.append(tokens[i]);
+                    i++;
+                }
+                i--;
+
+                values.push(Double.parseDouble(sb.toString()));
+            } else if (tokens[i] == '(') {
+                operators.push(tokens[i]);
+            } else if (tokens[i] == ')') {
+                while (!operators.isEmpty() && operators.peek() != '(') {
+                    values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
+                }
+                operators.pop();
+            } else if (tokens[i] == '+' || tokens[i] == '-' || tokens[i] == '*' || tokens[i] == '/') {
+                while (!operators.isEmpty() && hasPrecedence(tokens[i], operators.peek())) {
+                    values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
+                }
+                operators.push(tokens[i]);
+            }
+        }
+
+        while (!operators.isEmpty()) {
+            values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
+        }
+
+        return values.pop();
+    }
+
+    private static boolean hasPrecedence(char op1, char op2) {
+        if (op2 == '(' || op2 == ')')
+            return false;
+        if ((op1 == '*' || op1 == '/') && (op2 == '+' || op2 == '-'))
+            return false;
+        return true;
+    }
+
+    private static double applyOperator(char operator, double b, double a) {
+        switch (operator) {
+            case '+':
+                return a + b;
+            case '-':
+                return a - b;
+            case '*':
+                return a * b;
+            case '/':
+                if (b == 0) {
+                    throw new ArithmeticException("Cannot divide by zero");
+                }
+                return a / b;
+        }
+        return 0;
+    }
 }
+
